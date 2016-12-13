@@ -2,14 +2,15 @@
        PROGRAM-ID.                 CBLPGCST.
        AUTHOR.                     PHILIP GINGERICH.
        DATE-WRITTEN.               12/05/2015.
-       DATE-COMPILED.              
+       DATE-COMPILED.   
        
       *****************************************************************
       * 
-      *    THIS PROGRAM WILL CREATE A REPORT THAT CONTAINS THE COST TO
+      *    THIS PROGRAM WILL CREATE A REPORT SHOWING THE COST TO
       *    CREATE EACH MACHINE.    
       * 
       *****************************************************************
+       
        ENVIRONMENT DIVISION.
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
@@ -46,8 +47,8 @@
            
        01  INVENTORY-RECORD.
            05  I-INV-PART          PIC X(5).
-           05  I-INV-QTY           PIC 999.
-           05  I-INV-COST          PIC 9(6)V99.
+           05  I-INV-QTY           PIC 9(5).
+           05  I-INV-COST          PIC 9(4)V99.
        
        FD  PRTOUT
            LABEL RECORD IS OMITTED
@@ -60,8 +61,9 @@
        WORKING-STORAGE SECTION.
        
        01  WORK-AREA.
-           05  C-PARTS-SUBTOT      PIC 9(8)V99     VALUE ZEROS.
-           05  C-MACHINE-TOT       PIC 9(10)V99    VALUE ZEROS.
+           05  C-PARTS-SUBTOT      PIC 9(6)V99     VALUE ZEROS.
+           05  C-MACHINE-TOT       PIC 9(8)V99     VALUE ZEROS.
+           05  C-GT-COST           PIC 9(10)V99    VALUE ZEROS.
            05  H-MACHINE           PIC X(5)        VALUE SPACES.
            05  MORE-RECS           PIC X           VALUE 'Y'.
            05  C-PCTR              PIC 99          VALUE ZEROS.
@@ -73,7 +75,7 @@
                10  I-MONTH   PIC 99.
                10  I-DAY     PIC 99.
            
-       01  TITLE-LINE.
+       01  CO-TITLE-LINE.
            05  FILLER              PIC X(6)    VALUE "DATE: ".
            05  O-MONTH             PIC 99.
            05  FILLER              PIC X       VALUE "/".
@@ -82,87 +84,100 @@
            05  O-YEAR              PIC 9(4).
            05  FILLER              PIC X(11)   VALUE SPACES.
            05  FILLER              PIC X(45)   VALUE 
-                                           "GINGERICH'S MACHINE REPORT".
-           05  FILLER              PIC X(6)    VALUE 'PAGE: '.
+                                           "GINGERICH'S MANUFACTURING".
+           05  FILLER              PIC X(6)    VALUE 'PAGE:'.
            05  O-PCTR              PIC Z9.
            
+       01  RPT-TITLE-LINE.
+           05  FILLER              PIC X(30)   VALUE SPACES.
+           05  FILLER              PIC X(19)   VALUE 
+                                               'MACHINE COST REPORT'.
+           
        01  COL-HDG-LINE.
-           05  FILLER              PIC X(15)   VALUE "MACHINE".
+           05  FILLER              PIC X(10)   VALUE SPACES.
            05  FILLER              PIC X(15)   VALUE "PART".
-           05  FILLER              PIC XXX     VALUE "QTY".
-           05  FILLER              PIC X(7)    VALUE  SPACES.
-           05  FILLER              PIC X(15)   VALUE "COST (PER PART)".
-           05  FILLER              PIC X(7)    VALUE SPACES.
-           05  FILLER              PIC X(18)   VALUE 
-                                               "PART SUBTOTAL COST".    
+           05  FILLER              PIC X(8)    VALUE "QTY".
+           05  FILLER              PIC X(19)   VALUE "COST (PER PART)".
+           05  FILLER              PIC X(21)   VALUE 
+                                                   "PART SUBTOTAL COST".
        
        01  DETAIL-LINE.
-           05  O-MACHINE           PIC X(5).
-           05  FILLER              PIC X(10)    VALUE SPACES.
+           05  FILLER              PIC X(10)     VALUE SPACES.
            05  O-PART              PIC X(5).
-           05  FILLER              PIC X(10)    VALUE SPACES.
+           05  FILLER              PIC X(10)     VALUE SPACES.
            05  O-QTY               PIC ZZ9.
-           05  FILLER              PIC X(11)    VALUE SPACES.
-           05  O-PART-COST         PIC $$$$,$$9.99.
-           05  FILLER              PIC X(11)    VALUE SPACES.
-           05  O-PARTS-SUBTOT      PIC $$$,$$$,$$9.99.
+           05  FILLER              PIC X(11)     VALUE SPACES.
+           05  O-PART-COST         PIC $$,$$$.99.
+           05  FILLER              PIC X(11)   VALUE SPACES.
+           05  O-PARTS-SUBTOT      PIC $$$$,$$$.99.
            
-           
+       01  MACHINE-HDG.
+           05  FILLER              PIC X(9)    VALUE 'MACHINE: '.
+           05  O-MACHINE           PIC X(5).
            
        01  TOTAL-LINE.
-           05  FILLER              PIC X(47)   VALUE SPACES.
-           05  FILLER              PIC X(15)   VALUE "MACHINE TOTAL: ".
-           05  O-MACHINE-TOT       PIC $$$,$$$,$$$,$$9.99.
+           05  FILLER              PIC X(36)   VALUE SPACES.
+           05  FILLER              PIC X(20)   VALUE 
+                                       "MACHINE TOTAL COST:".
+           05  O-MACHINE-TOT       PIC $$$,$$$,$$$.99.
+           
+       01  GRAND-TOTAL-LINE.
+           05  FILLER              PIC X(35)   VALUE SPACES.
+           05  FILLER              PIC X(18)   VALUE 
+                                       'GRAND TOTAL COST:'.
+           05  O-GT-COST           PIC $$,$$$,$$$,$$$.99.
            
        01 BLANK-LINE               PIC X       VALUE SPACE.
            
        PROCEDURE DIVISION.
        
-       0000-CBLPGCST.
-           PERFORM 1000-INIT.
-           PERFORM 2000-MAINLINE
+       L1-CBLPGCST.
+           PERFORM L2-INIT.
+           PERFORM L2-MAINLINE
                UNTIL MORE-RECS = "N".
-           PERFORM 3000-CLOSING.
+           PERFORM L2-CLOSING.
            STOP RUN.
            
-       1000-INIT.
+       L2-INIT.
            MOVE FUNCTION CURRENT-DATE TO CURRENT-DATE.
            MOVE I-MONTH TO O-MONTH.
            MOVE I-DAY TO O-DAY.
            MOVE I-YEAR TO O-YEAR.
            OPEN INPUT MACHINE-MASTER.
            OPEN OUTPUT PRTOUT.
-           PERFORM 9100-HDGS.
-           PERFORM 9200-READ-MACHINE.
-           MOVE I-MACHINE TO H-MACHINE.
+           PERFORM L9-HDGS.
+           PERFORM L9-READ-MACHINE.
+           MOVE I-MACHINE TO H-MACHINE O-MACHINE.
            
-       2000-MAINLINE.
+       L2-MAINLINE.
+           WRITE PRTLINE FROM MACHINE-HDG
+               AFTER ADVANCING 3 LINES.
+           WRITE PRTLINE FROM BLANK-LINE
+               AFTER ADVANCING 1 LINE.
            OPEN INPUT INVENTORY-DATA.
-           PERFORM 9300-READ-INVENTORY.
-           PERFORM 2100-DETAIL WITH TEST BEFORE
+           PERFORM L9-READ-INVENTORY.
+           PERFORM L3-DETAIL WITH TEST BEFORE
                UNTIL I-MACHINE NOT EQUAL H-MACHINE.
            WRITE PRTLINE FROM TOTAL-LINE
                AFTER ADVANCING 2 LINES.
-           WRITE PRTLINE FROM BLANK-LINE
-               AFTER ADVANCING 2 LINES.
            MOVE ZEROS TO C-MACHINE-TOT.
            CLOSE INVENTORY-DATA.
-           MOVE I-MACHINE TO H-MACHINE.
+           MOVE I-MACHINE TO H-MACHINE O-MACHINE.
                
-       2100-DETAIL.
+       L3-DETAIL.
            IF I-MACHINE-PART = I-INV-PART
-               PERFORM 2110-CALCS
-               PERFORM 2120-MOVES
-               PERFORM 9200-READ-MACHINE
+               PERFORM L4-CALCS
+               PERFORM L4-MOVES
+               PERFORM L9-READ-MACHINE
            ELSE
-               READ INVENTORY-DATA
+               PERFORM L9-READ-INVENTORY
            END-IF.
                    
-       2110-CALCS.
+       L4-CALCS.
            COMPUTE C-PARTS-SUBTOT = I-PART-QTY * I-INV-COST.
-           ADD C-PARTS-SUBTOT TO C-MACHINE-TOT.
+           ADD C-PARTS-SUBTOT TO C-MACHINE-TOT C-GT-COST.
            
-       2120-MOVES.
+       L4-MOVES.
            MOVE H-MACHINE TO O-MACHINE.
            MOVE I-MACHINE-PART TO O-PART.
            MOVE I-PART-QTY TO O-QTY.
@@ -172,29 +187,32 @@
            WRITE PRTLINE FROM DETAIL-LINE
                AFTER ADVANCING 1 LINE
                    AT EOP
-                       PERFORM 9100-HDGS.
+                       PERFORM L9-HDGS.
            
-       3000-CLOSING.
+       L2-CLOSING.
+           MOVE C-GT-COST TO O-GT-COST.
+           WRITE PRTLINE FROM GRAND-TOTAL-LINE
+               AFTER ADVANCING 3 LINES.
            CLOSE MACHINE-MASTER.
            CLOSE PRTOUT.
            
-       9100-HDGS.
+       L9-HDGS.
            ADD 1 TO C-PCTR.
            MOVE C-PCTR TO O-PCTR.
-           WRITE PRTLINE FROM TITLE-LINE
+           WRITE PRTLINE FROM CO-TITLE-LINE
                AFTER ADVANCING PAGE.
+           WRITE PRTLINE FROM RPT-TITLE-LINE
+               AFTER ADVANCING 1 LINE.
            WRITE PRTLINE FROM COL-HDG-LINE
                AFTER ADVANCING 2 LINES.
-           WRITE PRTLINE FROM BLANK-LINE
-               AFTER ADVANCING 2 LINES.
            
-       9200-READ-MACHINE.
+       L9-READ-MACHINE.
            READ MACHINE-MASTER
                AT END
                    MOVE 'N' TO MORE-RECS
                    MOVE SPACES TO I-MACHINE.
                    
-       9300-READ-INVENTORY.
+       L9-READ-INVENTORY.
            READ INVENTORY-DATA
                AT END
                    DISPLAY "INVENTORY DATA CONTAINS NO MORE RECORDS"
